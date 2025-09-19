@@ -1,3 +1,298 @@
+'use client';
+
+import { zodResolver } from "@hookform/resolvers/zod";
+import { BrainCircuit, CheckCircle2, Heart, Infinity, Lightbulb, Loader2, Timer, Trophy, XCircle } from "lucide-react";
+import { useEffect, useState, useTransition } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+
+import { getHintAction } from "@/app/actions";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { toast } from "@/hooks/use-toast";
+import { riddles, Riddle } from "@/lib/riddles";
+import { cn } from "@/lib/utils";
+
+const AnswerFormSchema = z.object({
+  answer: z.coerce.number({
+    invalid_type_error: "Please enter a number.",
+  }),
+});
+
+type GameMode = "Timed" | "Endless" | "Challenge";
+
+const TOTAL_LEVELS = 50;
+
 export default function Home() {
-  return <></>;
+  const [gameMode, setGameMode] = useState<GameMode>("Endless");
+  const [currentLevel, setCurrentLevel] = useState(0);
+  const [unlockedLevels, setUnlockedLevels] = useState(1);
+  const [feedback, setFeedback] = useState<"correct" | "incorrect" | null>(null);
+  
+  const [hintsRemaining, setHintsRemaining] = useState(5);
+  const [currentHint, setCurrentHint] = useState<string | null>(null);
+  const [hintLevel, setHintLevel] = useState(0);
+  const [isHintLoading, startHintTransition] = useTransition();
+
+  const [lives, setLives] = useState(3);
+  const [timeLeft, setTimeLeft] = useState(60);
+
+  const form = useForm<z.infer<typeof AnswerFormSchema>>({
+    resolver: zodResolver(AnswerFormSchema),
+    defaultValues: {
+      answer: undefined,
+    },
+  });
+
+  const currentRiddle = riddles[currentLevel % riddles.length];
+
+  useEffect(() => {
+    if (gameMode !== 'Timed' || feedback === 'correct') return;
+    if (timeLeft === 0) {
+      setFeedback("incorrect");
+      toast({
+        title: "Time's Up!",
+        description: "You ran out of time. Try again!",
+        variant: "destructive",
+      });
+      setTimeout(() => {
+        resetLevel();
+      }, 2000);
+      return;
+    }
+
+    const timer = setInterval(() => setTimeLeft(t => t - 1), 1000);
+    return () => clearInterval(timer);
+  }, [timeLeft, gameMode, feedback]);
+
+  useEffect(() => {
+    form.reset({ answer: undefined });
+    setFeedback(null);
+    setCurrentHint(null);
+    setHintLevel(0);
+    if(gameMode === 'Timed') setTimeLeft(60);
+  }, [currentLevel, gameMode, form]);
+
+  const resetLevel = () => {
+    setFeedback(null);
+    form.reset({ answer: undefined });
+    if(gameMode === 'Timed') setTimeLeft(60);
+  };
+
+  const handleModeChange = (mode: GameMode) => {
+    setGameMode(mode);
+    setCurrentLevel(0);
+    setUnlockedLevels(1);
+    setLives(3);
+    setTimeLeft(60);
+  };
+
+  async function onSubmit(data: z.infer<typeof AnswerFormSchema>) {
+    if (data.answer === currentRiddle.answer) {
+      setFeedback("correct");
+      toast({
+        title: "Correct!",
+        description: "On to the next challenge!",
+      });
+      setTimeout(() => {
+        if (currentLevel + 1 < TOTAL_LEVELS) {
+            setCurrentLevel(prev => prev + 1);
+            setUnlockedLevels(prev => Math.max(prev, currentLevel + 2));
+        } else {
+            // Handle game completion
+        }
+      }, 1500);
+    } else {
+      setFeedback("incorrect");
+      if(gameMode === 'Challenge') {
+        if(lives - 1 === 0) {
+          toast({
+            title: "Game Over",
+            description: "You've run out of lives.",
+            variant: "destructive",
+          });
+          setLives(0);
+           setTimeout(() => handleModeChange('Challenge'), 2000);
+        } else {
+          setLives(l => l - 1);
+        }
+      }
+      form.setError("answer", { message: "Not quite, try again!" });
+      setTimeout(() => {
+        setFeedback(null);
+        form.clearErrors("answer");
+      }, 2000);
+    }
+  }
+
+  function handleGetHint() {
+    if (hintsRemaining <= 0) {
+      toast({
+        title: "No hints left!",
+        description: "You've used all your hints.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (hintLevel >= 3) {
+       toast({
+        title: "Max hints reached!",
+        description: "You've already received the most specific hint.",
+      });
+      return;
+    }
+
+    startHintTransition(async () => {
+      const newHintLevel = hintLevel + 1;
+      const result = await getHintAction({ riddle: currentRiddle.riddle, hintLevel: newHintLevel });
+      if (result.error) {
+        toast({ title: "Error", description: result.error, variant: "destructive" });
+      } else {
+        setCurrentHint(result.hint!);
+        setHintLevel(newHintLevel);
+        setHintsRemaining(h => h - 1);
+      }
+    });
+  }
+
+  const getLevelStatus = (levelIndex: number) => {
+    if (levelIndex < currentLevel) return "solved";
+    if (levelIndex === currentLevel) return "current";
+    if (levelIndex < unlockedLevels) return "unlocked";
+    return "locked";
+  };
+  
+  const levelStatusStyles = {
+    solved: "bg-accent text-accent-foreground",
+    current: "bg-primary text-primary-foreground ring-2 ring-offset-2 ring-primary ring-offset-background",
+    unlocked: "bg-secondary",
+    locked: "bg-muted/50 text-muted-foreground",
+  };
+
+  const getFeedbackIcon = () => {
+    if (feedback === 'correct') {
+      return <CheckCircle2 className="w-24 h-24 text-accent animate-bounce-in" />;
+    }
+    if (feedback === 'incorrect') {
+      return <XCircle className="w-24 h-24 text-destructive animate-shake" />;
+    }
+    return null;
+  };
+  
+  const gameModeIcons = {
+    Timed: <Timer className="w-4 h-4" />,
+    Endless: <Infinity className="w-4 h-4" />,
+    Challenge: <Trophy className="w-4 h-4" />,
+  };
+
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen w-full p-4 font-headline">
+      <Card className="w-full max-w-lg mx-auto shadow-2xl">
+        <CardHeader className="text-center">
+          <div className="flex justify-center items-center gap-2">
+            <BrainCircuit className="w-8 h-8 text-primary" />
+            <CardTitle className="text-3xl font-bold tracking-tighter">RiddleMath Mania</CardTitle>
+          </div>
+          <CardDescription>Level {currentLevel + 1} of {TOTAL_LEVELS}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-center text-muted-foreground">Level Progress</p>
+            <div className="grid grid-cols-10 gap-1.5 justify-center">
+              {Array.from({ length: TOTAL_LEVELS }).map((_, index) => (
+                <div
+                  key={index}
+                  onClick={() => getLevelStatus(index) !== 'locked' && setCurrentLevel(index)}
+                  className={cn(
+                    "flex items-center justify-center text-xs font-bold h-7 w-7 rounded-md transition-all duration-300",
+                    levelStatusStyles[getLevelStatus(index)],
+                    getLevelStatus(index) !== 'locked' && 'cursor-pointer hover:scale-110'
+                  )}
+                >
+                  {index + 1}
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+             <p className="text-sm font-medium text-center text-muted-foreground">Game Mode</p>
+            <div className="flex justify-center gap-2">
+              {(['Timed', 'Endless', 'Challenge'] as GameMode[]).map(mode => (
+                <Button key={mode} variant={gameMode === mode ? 'default' : 'secondary'} onClick={() => handleModeChange(mode)} className="gap-2">
+                  {gameModeIcons[mode]}
+                  {mode}
+                </Button>
+              ))}
+            </div>
+          </div>
+          
+          <div className="relative min-h-[200px] flex items-center justify-center rounded-lg bg-muted/50 p-4">
+            {feedback ? (
+              <div className="absolute inset-0 flex items-center justify-center z-10">{getFeedbackIcon()}</div>
+            ) : (
+              <div className={cn("text-center space-y-4 transition-opacity duration-300", feedback && "opacity-0")}>
+                {gameMode === 'Timed' && <div className="absolute top-2 right-2 text-lg font-bold text-primary">{timeLeft}s</div>}
+                {gameMode === 'Challenge' && (
+                  <div className="absolute top-2 left-2 flex items-center gap-1 text-lg font-bold text-destructive">
+                    {Array.from({length: lives}).map((_, i) => <Heart key={i} className="w-5 h-5 fill-current"/>)}
+                  </div>
+                )}
+                <p className="text-xl font-semibold text-center text-card-foreground px-4">{currentRiddle.riddle}</p>
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="flex items-start gap-2 justify-center">
+                    <FormField
+                      control={form.control}
+                      name="answer"
+                      render={({ field }) => (
+                        <FormItem className="w-32">
+                          <FormControl>
+                            <Input 
+                              {...field}
+                              type="number"
+                              placeholder="Your answer"
+                              className={cn(
+                                "text-center text-lg h-12",
+                                feedback === 'incorrect' && 'border-destructive animate-shake'
+                              )}
+                              onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)}
+                            />
+                          </FormControl>
+                          <FormMessage className="text-center" />
+                        </FormItem>
+                      )}
+                    />
+                    <Button type="submit" size="lg" className="h-12 bg-accent hover:bg-accent/90">Submit</Button>
+                  </form>
+                </Form>
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Button onClick={handleGetHint} variant="outline" className="w-full" disabled={isHintLoading || feedback === 'correct'}>
+              {isHintLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Lightbulb className="mr-2 h-4 w-4" />}
+              Get a Hint ({hintsRemaining} left)
+            </Button>
+            {currentHint && (
+              <div className="p-3 bg-secondary rounded-md text-sm text-secondary-foreground text-center animate-fade-in">
+                {currentHint}
+              </div>
+            )}
+          </div>
+        </CardContent>
+        <CardFooter className="text-xs text-muted-foreground justify-center">
+          <p>Solve the riddle to unlock the next level!</p>
+        </CardFooter>
+      </Card>
+    </div>
+  );
 }
+
+// Add fade-in animation to tailwind.config.ts if not present
+// keyframes: { 'fade-in': { from: { opacity: '0' }, to: { opacity: '1' } } }
+// animation: { 'fade-in': 'fade-in 0.5s ease-out' }
