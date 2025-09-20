@@ -154,8 +154,9 @@ export default function GamePage() {
 
     toast({
       title: "Congratulations!",
-      description: `You've completed all the riddles!`,
+      description: `You've completed all the riddles! Check the leaderboard for your score.`,
     });
+    router.push('/leaderboard');
   }
 
   useEffect(() => {
@@ -185,17 +186,14 @@ export default function GamePage() {
       }, 1500);
     } else {
       setFeedback("incorrect");
-       if (gameMode === 'Timed') {
-        setTimeout(() => {
-          goToNextLevel();
-        }, 2000);
-        return;
-      }
       if(gameMode === 'Challenge') {
         setLives(l => l - 1);
       }
-      form.setError("answer", { message: "Not quite, try again!" });
       setTimeout(() => {
+         if (gameMode === 'Timed') {
+          goToNextLevel();
+          return;
+        }
         setFeedback(null);
         form.clearErrors("answer");
       }, 2000);
@@ -330,7 +328,8 @@ export default function GamePage() {
                     className={cn(
                       "flex items-center justify-center text-xs font-bold h-7 w-7 rounded-md transition-all duration-300",
                       levelStatusStyles[status],
-                      isClickable && 'cursor-pointer hover:scale-110'
+                      isClickable && 'cursor-pointer hover:scale-110',
+                      (status === 'solved' || status === 'locked') && 'cursor-not-allowed'
                     )}
                   >
                     {index + 1}
@@ -438,7 +437,3 @@ export default function GamePage() {
     </div>
   );
 }
-
-    
-
-    
