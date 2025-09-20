@@ -101,14 +101,14 @@ export default function GamePage() {
       timer = setInterval(() => {
         setTimeLeft((prevTime) => prevTime - 1);
       }, 1000);
-    } else if (gameMode === 'Timed' && gameStatus === 'playing' && timeLeft === 0) {
+    } else if (gameMode === 'Timed' && gameStatus === 'playing' && timeLeft === 0 && feedback === null) {
       setFeedback('timesup');
       setTimeout(() => {
         goToNextLevel();
       }, 2000);
     }
     return () => clearInterval(timer);
-  }, [timeLeft, gameMode, gameStatus, currentLevel]);
+  }, [timeLeft, gameMode, gameStatus, currentLevel, feedback]);
 
   useEffect(() => {
     if (isLoading) return;
@@ -153,8 +153,8 @@ export default function GamePage() {
         description: "On to the next challenge!",
       });
       setTimeout(() => {
-        goToNextLevel();
         setUnlockedLevels(prev => Math.max(prev, currentLevel + 2));
+        goToNextLevel();
       }, 1500);
     } else {
       setFeedback("incorrect");
@@ -297,19 +297,23 @@ export default function GamePage() {
           <div className="space-y-2">
             <p className="text-sm font-medium text-center text-muted-foreground">Level Progress</p>
             <div className="grid grid-cols-10 gap-1.5 justify-center">
-              {Array.from({ length: TOTAL_LEVELS }).map((_, index) => (
-                <div
-                  key={index}
-                  onClick={() => getLevelStatus(index) !== 'locked' && gameStatus === 'playing' && setCurrentLevel(index)}
-                  className={cn(
-                    "flex items-center justify-center text-xs font-bold h-7 w-7 rounded-md transition-all duration-300",
-                    levelStatusStyles[getLevelStatus(index)],
-                    getLevelStatus(index) !== 'locked' && gameStatus === 'playing' && 'cursor-pointer hover:scale-110'
-                  )}
-                >
-                  {index + 1}
-                </div>
-              ))}
+              {Array.from({ length: TOTAL_LEVELS }).map((_, index) => {
+                const status = getLevelStatus(index);
+                const isClickable = (status === 'unlocked' || status === 'current') && gameStatus === 'playing';
+                return (
+                  <div
+                    key={index}
+                    onClick={() => isClickable && setCurrentLevel(index)}
+                    className={cn(
+                      "flex items-center justify-center text-xs font-bold h-7 w-7 rounded-md transition-all duration-300",
+                      levelStatusStyles[status],
+                      isClickable && 'cursor-pointer hover:scale-110'
+                    )}
+                  >
+                    {index + 1}
+                  </div>
+                );
+              })}
             </div>
           </div>
           
@@ -411,5 +415,7 @@ export default function GamePage() {
     </div>
   );
 }
+
+    
 
     
