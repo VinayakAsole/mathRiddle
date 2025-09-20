@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { BrainCircuit, CheckCircle2, Heart, Home, Infinity, Lightbulb, Loader2, Timer, Trophy, XCircle } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useState, useTransition, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
@@ -25,11 +25,13 @@ const AnswerFormSchema = z.object({
 });
 
 type GameMode = "Timed" | "Endless" | "Challenge";
+type GameStatus = 'playing' | 'completed';
 
 const TOTAL_LEVELS = 50;
 
 export default function GamePage() {
   const router = useRouter();
+  const { toast } = useToast();
   const { user, selectedGameMode, addPoints, resetProgressForMode } = useUser();
   const gameMode = selectedGameMode;
   
@@ -45,6 +47,9 @@ export default function GamePage() {
 
   const [lives, setLives] = useState(3);
   const [timeLeft, setTimeLeft] = useState(60);
+  const [gameStatus, setGameStatus] = useState<GameStatus>('playing');
+  const startTimeRef = useRef<number | null>(null);
+  const [completionTime, setCompletionTime] = useState<string | null>(null);
 
   const form = useForm<z.infer<typeof AnswerFormSchema>>({
     resolver: zodResolver(AnswerFormSchema),
@@ -52,6 +57,12 @@ export default function GamePage() {
       answer: undefined,
     },
   });
+  
+  useEffect(() => {
+    if (startTimeRef.current === null) {
+      startTimeRef.current = Date.now();
+    }
+  }, []);
 
   useEffect(() => {
     if (!user.name || !gameMode) {
@@ -65,23 +76,21 @@ export default function GamePage() {
   const currentRiddle = riddles[currentLevel % riddles.length];
 
   useEffect(() => {
-    if (gameMode !== 'Timed' || feedback === 'correct' || isLoading) return;
+    if (gameMode !== 'Timed' || feedback === 'correct' || isLoading || gameStatus !== 'playing') return;
+    
     if (timeLeft === 0) {
-      setFeedback("incorrect");
       toast({
         title: "Time's Up!",
         description: "You ran out of time. Try again!",
         variant: "destructive",
       });
-      setTimeout(() => {
-        resetLevel();
-      }, 2000);
+      resetLevel();
       return;
     }
 
-    const timer = setInterval(() => setTimeLeft(t => t - 1), 1000);
+    const timer = setInterval(() => setTimeLeft(t => t > 0 ? t - 1 : 0), 1000);
     return () => clearInterval(timer);
-  }, [timeLeft, gameMode, feedback, isLoading]);
+  }, [timeLeft, gameMode, feedback, isLoading, gameStatus]);
 
   useEffect(() => {
     if (isLoading) return;
@@ -104,7 +113,25 @@ export default function GamePage() {
     setUnlockedLevels(1);
     setLives(3);
     setTimeLeft(60);
+    setGameStatus('playing');
+    startTimeRef.current = Date.now();
+    setCompletionTime(null);
   };
+  
+  const handleGameCompletion = () => {
+    setGameStatus('completed');
+    if (startTimeRef.current) {
+      const endTime = Date.now();
+      const duration = Math.round((endTime - startTimeRef.current) / 1000);
+      const minutes = Math.floor(duration / 60);
+      const seconds = duration % 60;
+      setCompletionTime(`${minutes}m ${seconds}s`);
+    }
+    toast({
+      title: "Congratulations!",
+      description: `You've completed all the riddles!`,
+    });
+  }
 
   async function onSubmit(data: z.infer<typeof AnswerFormSchema>) {
     if (data.answer === currentRiddle.answer) {
@@ -119,11 +146,7 @@ export default function GamePage() {
             setCurrentLevel(prev => prev + 1);
             setUnlockedLevels(prev => Math.max(prev, currentLevel + 2));
         } else {
-            // Handle game completion
-             toast({
-              title: "Congratulations!",
-              description: "You've completed all the riddles!",
-            });
+            handleGameCompletion();
         }
       }, 1500);
     } else {
@@ -240,11 +263,11 @@ export default function GamePage() {
               {Array.from({ length: TOTAL_LEVELS }).map((_, index) => (
                 <div
                   key={index}
-                  onClick={() => getLevelStatus(index) !== 'locked' && setCurrentLevel(index)}
+                  onClick={() => getLevelStatus(index) !== 'locked' && gameStatus === 'playing' && setCurrentLevel(index)}
                   className={cn(
                     "flex items-center justify-center text-xs font-bold h-7 w-7 rounded-md transition-all duration-300",
                     levelStatusStyles[getLevelStatus(index)],
-                    getLevelStatus(index) !== 'locked' && 'cursor-pointer hover:scale-110'
+                    getLevelStatus(index) !== 'locked' && gameStatus === 'playing' && 'cursor-pointer hover:scale-110'
                   )}
                 >
                   {index + 1}
@@ -263,6 +286,14 @@ export default function GamePage() {
           <div className="relative min-h-[200px] flex items-center justify-center rounded-lg bg-muted/50 p-4">
             {feedback ? (
               <div className="absolute inset-0 flex items-center justify-center z-10">{getFeedbackIcon()}</div>
+            ) : gameStatus === 'completed' ? (
+              <div className="text-center space-y-4">
+                <Trophy className="w-24 h-24 text-accent mx-auto" />
+                <h2 className="text-2xl font-bold">You did it!</h2>
+                <p>You completed all {TOTAL_LEVELS} riddles.</p>
+                {completionTime && <p>Total Time: <span className="font-bold">{completionTime}</span></p>}
+                <Button onClick={() => handleModeChange(gameMode!)}>Play Again</Button>
+              </div>
             ) : (
               <div className={cn("text-center space-y-4 transition-opacity duration-300", feedback && "opacity-0")}>
                 {gameMode === 'Timed' && <div className="absolute top-2 right-2 text-lg font-bold text-primary">{timeLeft}s</div>}
@@ -303,7 +334,7 @@ export default function GamePage() {
           </div>
 
           <div className="space-y-2">
-            <Button onClick={handleGetHint} variant="outline" className="w-full" disabled={isHintLoading || feedback === 'correct'}>
+            <Button onClick={handleGetHint} variant="outline" className="w-full" disabled={isHintLoading || feedback === 'correct' || gameStatus === 'completed'}>
               {isHintLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Lightbulb className="mr-2 h-4 w-4" />}
               Get a Hint ({hintsRemaining} left)
             </Button>
