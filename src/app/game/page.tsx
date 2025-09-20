@@ -94,7 +94,7 @@ export default function GamePage() {
     setHintLevel(0);
     if(gameMode === 'Timed') setTimeLeft(60);
   };
-
+  
   useEffect(() => {
     let timer: NodeJS.Timeout;
     if (gameMode === 'Timed' && gameStatus === 'playing' && timeLeft > 0) {
@@ -116,18 +116,22 @@ export default function GamePage() {
   }, [currentLevel, gameMode, isLoading]);
   
   const handlePlayAgain = () => {
-    resetProgressForMode(gameMode!);
+    if(gameMode) resetProgressForMode(gameMode);
     setCurrentLevel(0);
     setUnlockedLevels(1);
     setLives(3);
     setTimeLeft(60);
     setGameStatus('playing');
+    setFeedback(null);
+    form.reset({ answer: undefined });
     startTimeRef.current = Date.now();
     setCompletionTime(null);
     router.push('/gamemode');
   };
   
   const handleGameCompletion = () => {
+    if (gameStatus === 'completed') return;
+    
     setGameStatus('completed');
     let duration = 0;
     if (startTimeRef.current) {
@@ -184,7 +188,7 @@ export default function GamePage() {
             description: "You've run out of lives.",
             variant: "destructive",
           });
-           setTimeout(() => handlePlayAgain(), 2000);
+          setTimeout(() => handleGameCompletion(), 2000);
            return;
         }
       }
@@ -312,19 +316,19 @@ export default function GamePage() {
             <div className="grid grid-cols-10 gap-1.5 justify-center">
               {Array.from({ length: TOTAL_LEVELS }).map((_, index) => {
                 const status = getLevelStatus(index);
-                const isClickable = status !== 'locked' && gameStatus === 'playing';
+                const isClickable = status === 'unlocked' && gameStatus === 'playing';
                 return (
                   <div
                     key={index}
                     onClick={() => {
-                        if (isClickable && status !== 'solved') {
+                        if (isClickable) {
                             setCurrentLevel(index);
                         }
                     }}
                     className={cn(
                       "flex items-center justify-center text-xs font-bold h-7 w-7 rounded-md transition-all duration-300",
                       levelStatusStyles[status],
-                      (isClickable && status !== 'solved') && 'cursor-pointer hover:scale-110'
+                      isClickable && 'cursor-pointer hover:scale-110'
                     )}
                   >
                     {index + 1}
@@ -432,3 +436,5 @@ export default function GamePage() {
     </div>
   );
 }
+
+    

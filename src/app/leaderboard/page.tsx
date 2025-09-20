@@ -97,7 +97,7 @@ export default function LeaderboardPage() {
                             <TableCell className="text-right font-semibold">{entry.points}</TableCell>
                             <TableCell className="text-right">{formatDuration(entry.time)}</TableCell>
                             <TableCell className="text-right text-xs text-muted-foreground">
-                                {formatDistanceToNow(new Date(entry.date), { addSuffix: true })}
+                                {isClient ? formatDistanceToNow(new Date(entry.date), { addSuffix: true }) : ''}
                             </TableCell>
                         </TableRow>
                         ))
@@ -116,3 +116,5 @@ export default function LeaderboardPage() {
     </div>
   );
 }
+
+    
