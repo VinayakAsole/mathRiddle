@@ -79,6 +79,7 @@ export default function GamePage() {
   const currentRiddle = riddles[currentLevel % riddles.length];
 
   const goToNextLevel = () => {
+    if (gameStatus === 'completed') return;
     if (currentLevel + 1 < TOTAL_LEVELS) {
         setCurrentLevel(prev => prev + 1);
     } else {
@@ -108,7 +109,7 @@ export default function GamePage() {
       }, 2000);
     }
     return () => clearInterval(timer);
-  }, [timeLeft, gameMode, gameStatus, currentLevel, feedback, goToNextLevel]);
+  }, [timeLeft, gameMode, gameStatus, currentLevel, feedback]);
 
   useEffect(() => {
     if (isLoading) return;
@@ -158,6 +159,17 @@ export default function GamePage() {
     });
   }
 
+  useEffect(() => {
+    if (gameMode === 'Challenge' && lives <= 0 && gameStatus === 'playing') {
+        toast({
+            title: "Game Over",
+            description: "You've run out of lives.",
+            variant: "destructive",
+        });
+        handleGameCompletion();
+    }
+  }, [lives, gameMode, gameStatus]);
+
   async function onSubmit(data: z.infer<typeof AnswerFormSchema>) {
     if(feedback !== null || gameStatus !== 'playing') return;
 
@@ -182,15 +194,6 @@ export default function GamePage() {
       }
       if(gameMode === 'Challenge') {
         setLives(l => l - 1);
-        if(lives - 1 <= 0) {
-          toast({
-            title: "Game Over",
-            description: "You've run out of lives.",
-            variant: "destructive",
-          });
-          setTimeout(() => handleGameCompletion(), 2000);
-           return;
-        }
       }
       form.setError("answer", { message: "Not quite, try again!" });
       setTimeout(() => {
@@ -436,5 +439,7 @@ export default function GamePage() {
     </div>
   );
 }
+
+    
 
     
