@@ -1,7 +1,8 @@
+
 'use client';
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { BrainCircuit, CheckCircle2, Heart, Home, Infinity, Lightbulb, Loader2, Timer, Trophy, XCircle } from "lucide-react";
+import { BrainCircuit, CheckCircle2, Heart, Home, Infinity, Lightbulb, Loader2, Store, Timer, Trophy, XCircle } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition, useRef } from "react";
@@ -9,6 +10,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 
 import { getHintAction } from "@/app/actions";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
@@ -28,11 +30,12 @@ type GameMode = "Timed" | "Endless" | "Challenge";
 type GameStatus = 'playing' | 'completed';
 
 const TOTAL_LEVELS = 50;
+const HINT_COST = 10;
 
 export default function GamePage() {
   const router = useRouter();
   const { toast } = useToast();
-  const { user, selectedGameMode, addPoints, resetProgressForMode } = useUser();
+  const { user, selectedGameMode, addPoints, resetProgressForMode, spendPoints } = useUser();
   const gameMode = selectedGameMode;
   
   const [isLoading, setIsLoading] = useState(true);
@@ -177,7 +180,7 @@ export default function GamePage() {
     if (hintsRemaining <= 0) {
       toast({
         title: "No hints left!",
-        description: "You've used all your hints.",
+        description: "Visit the store to buy more hints.",
         variant: "destructive"
       });
       return;
@@ -186,7 +189,7 @@ export default function GamePage() {
     if (hintLevel >= 3) {
        toast({
         title: "Max hints reached!",
-        description: "You've already received the most specific hint.",
+        description: "You've already received the most specific hint for this riddle.",
       });
       return;
     }
@@ -203,6 +206,24 @@ export default function GamePage() {
       }
     });
   }
+  
+  function handleBuyHint() {
+    if (user.points >= HINT_COST) {
+      spendPoints(HINT_COST);
+      setHintsRemaining(h => h + 1);
+      toast({
+        title: "Hint purchased!",
+        description: `You have ${hintsRemaining + 1} hints remaining.`,
+      });
+    } else {
+      toast({
+        title: "Not enough points!",
+        description: `You need ${HINT_COST} points to buy a hint.`,
+        variant: "destructive",
+      });
+    }
+  }
+
 
   const getLevelStatus = (levelIndex: number) => {
     if (levelIndex < currentLevel) return "solved";
@@ -344,10 +365,31 @@ export default function GamePage() {
           </div>
 
           <div className="space-y-2">
-            <Button onClick={handleGetHint} variant="outline" className="w-full" disabled={isHintLoading || !!feedback || gameStatus === 'completed'}>
-              {isHintLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Lightbulb className="mr-2 h-4 w-4" />}
-              Get a Hint ({hintsRemaining} left)
-            </Button>
+            <div className="flex gap-2">
+              <Button onClick={handleGetHint} variant="outline" className="w-full" disabled={isHintLoading || !!feedback || gameStatus === 'completed'}>
+                {isHintLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Lightbulb className="mr-2 h-4 w-4" />}
+                Get a Hint ({hintsRemaining} left)
+              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="outline" size="icon" disabled={!!feedback || gameStatus === 'completed'}>
+                    <Store className="w-4 h-4"/>
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Hint Store</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      You have {user.points} points. Would you like to buy a hint for {HINT_COST} points?
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleBuyHint}>Buy Hint</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
             {currentHint && (
               <div className="p-3 bg-secondary rounded-md text-sm text-secondary-foreground text-center animate-fade-in">
                 {currentHint}

@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode } from 'react';
@@ -16,6 +17,7 @@ interface UserContextType {
   selectedGameMode: GameMode | null;
   setSelectedGameMode: (mode: GameMode) => void;
   addPoints: (points: number) => void;
+  spendPoints: (points: number) => void;
   resetProgressForMode: (mode: GameMode) => void;
 }
 
@@ -33,6 +35,10 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     setUserState(currentUser => ({...currentUser, points: currentUser.points + points}));
   }
 
+  const spendPoints = (points: number) => {
+    setUserState(currentUser => ({...currentUser, points: Math.max(0, currentUser.points - points)}));
+  }
+
   const resetProgressForMode = (mode: GameMode) => {
     // In a real app, you might have mode-specific progress
     // For now, this is a placeholder.
@@ -40,7 +46,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   }
 
   return (
-    <UserContext.Provider value={{ user, setUser, selectedGameMode, setSelectedGameMode, addPoints, resetProgressForMode }}>
+    <UserContext.Provider value={{ user, setUser, selectedGameMode, setSelectedGameMode, addPoints, spendPoints, resetProgressForMode }}>
       {children}
     </UserContext.Provider>
   );
