@@ -38,7 +38,7 @@ export default function GamePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [currentLevel, setCurrentLevel] = useState(0);
   const [unlockedLevels, setUnlockedLevels] = useState(1);
-  const [feedback, setFeedback] = useState<"correct" | "incorrect" | null>(null);
+  const [feedback, setFeedback] = useState<"correct" | "incorrect" | "timesup" | null>(null);
   
   const [hintsRemaining, setHintsRemaining] = useState(5);
   const [currentHint, setCurrentHint] = useState<string | null>(null);
@@ -83,22 +83,18 @@ export default function GamePage() {
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
-    if (gameMode === 'Timed' && gameStatus === 'playing' && feedback !== 'correct') {
-      if (timeLeft > 0) {
-        timer = setInterval(() => {
-          setTimeLeft((prevTime) => prevTime - 1);
-        }, 1000);
-      } else {
-        toast({
-          title: "Time's Up!",
-          description: "You ran out of time. Try again!",
-          variant: "destructive",
-        });
+    if (gameMode === 'Timed' && gameStatus === 'playing' && timeLeft > 0) {
+      timer = setInterval(() => {
+        setTimeLeft((prevTime) => prevTime - 1);
+      }, 1000);
+    } else if (gameMode === 'Timed' && gameStatus === 'playing' && timeLeft === 0) {
+      setFeedback('timesup');
+      setTimeout(() => {
         resetLevel();
-      }
+      }, 2000);
     }
     return () => clearInterval(timer);
-  }, [timeLeft, gameMode, gameStatus, feedback]);
+  }, [timeLeft, gameMode, gameStatus]);
 
   useEffect(() => {
     if (isLoading) return;
@@ -137,6 +133,8 @@ export default function GamePage() {
   }
 
   async function onSubmit(data: z.infer<typeof AnswerFormSchema>) {
+    if(feedback === 'timesup') return;
+
     if (data.answer === currentRiddle.answer) {
       setFeedback("correct");
       addPoints(10);
@@ -226,6 +224,14 @@ export default function GamePage() {
     }
     if (feedback === 'incorrect') {
       return <XCircle className="w-24 h-24 text-destructive animate-shake" />;
+    }
+    if (feedback === 'timesup') {
+      return (
+        <div className="text-center text-destructive animate-shake">
+          <Timer className="w-24 h-24 mx-auto"/>
+          <p className="text-2xl font-bold mt-2">Time's Up!</p>
+        </div>
+      );
     }
     return null;
   };
@@ -338,7 +344,7 @@ export default function GamePage() {
           </div>
 
           <div className="space-y-2">
-            <Button onClick={handleGetHint} variant="outline" className="w-full" disabled={isHintLoading || feedback === 'correct' || gameStatus === 'completed'}>
+            <Button onClick={handleGetHint} variant="outline" className="w-full" disabled={isHintLoading || !!feedback || gameStatus === 'completed'}>
               {isHintLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Lightbulb className="mr-2 h-4 w-4" />}
               Get a Hint ({hintsRemaining} left)
             </Button>
