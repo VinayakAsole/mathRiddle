@@ -75,22 +75,30 @@ export default function GamePage() {
 
   const currentRiddle = riddles[currentLevel % riddles.length];
 
-  useEffect(() => {
-    if (gameMode !== 'Timed' || feedback === 'correct' || isLoading || gameStatus !== 'playing') return;
-    
-    if (timeLeft === 0) {
-      toast({
-        title: "Time's Up!",
-        description: "You ran out of time. Try again!",
-        variant: "destructive",
-      });
-      resetLevel();
-      return;
-    }
+  const resetLevel = () => {
+    setFeedback(null);
+    form.reset({ answer: undefined });
+    if(gameMode === 'Timed') setTimeLeft(60);
+  };
 
-    const timer = setInterval(() => setTimeLeft(t => t > 0 ? t - 1 : 0), 1000);
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (gameMode === 'Timed' && gameStatus === 'playing' && feedback !== 'correct') {
+      if (timeLeft > 0) {
+        timer = setInterval(() => {
+          setTimeLeft((prevTime) => prevTime - 1);
+        }, 1000);
+      } else {
+        toast({
+          title: "Time's Up!",
+          description: "You ran out of time. Try again!",
+          variant: "destructive",
+        });
+        resetLevel();
+      }
+    }
     return () => clearInterval(timer);
-  }, [timeLeft, gameMode, feedback, isLoading, gameStatus]);
+  }, [timeLeft, gameMode, gameStatus, feedback]);
 
   useEffect(() => {
     if (isLoading) return;
@@ -100,12 +108,6 @@ export default function GamePage() {
     setHintLevel(0);
     if(gameMode === 'Timed') setTimeLeft(60);
   }, [currentLevel, gameMode, form, isLoading]);
-
-  const resetLevel = () => {
-    setFeedback(null);
-    form.reset({ answer: undefined });
-    if(gameMode === 'Timed') setTimeLeft(60);
-  };
   
   const handlePlayAgain = () => {
     resetProgressForMode(gameMode!);
@@ -354,5 +356,3 @@ export default function GamePage() {
     </div>
   );
 }
-
-    
