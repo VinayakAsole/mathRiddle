@@ -14,7 +14,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useUser } from "@/context/UserContext";
-import { toast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { riddles } from "@/lib/riddles";
 import { cn } from "@/lib/utils";
 
@@ -33,6 +33,7 @@ export default function GamePage() {
   const { user, selectedGameMode, addPoints, resetProgressForMode } = useUser();
   const gameMode = selectedGameMode;
   
+  const [isLoading, setIsLoading] = useState(true);
   const [currentLevel, setCurrentLevel] = useState(0);
   const [unlockedLevels, setUnlockedLevels] = useState(1);
   const [feedback, setFeedback] = useState<"correct" | "incorrect" | null>(null);
@@ -55,6 +56,8 @@ export default function GamePage() {
   useEffect(() => {
     if (!user.name || !gameMode) {
       router.push('/welcome');
+    } else {
+      setIsLoading(false);
     }
   }, [user.name, gameMode, router]);
 
@@ -62,7 +65,7 @@ export default function GamePage() {
   const currentRiddle = riddles[currentLevel % riddles.length];
 
   useEffect(() => {
-    if (gameMode !== 'Timed' || feedback === 'correct') return;
+    if (gameMode !== 'Timed' || feedback === 'correct' || isLoading) return;
     if (timeLeft === 0) {
       setFeedback("incorrect");
       toast({
@@ -78,15 +81,16 @@ export default function GamePage() {
 
     const timer = setInterval(() => setTimeLeft(t => t - 1), 1000);
     return () => clearInterval(timer);
-  }, [timeLeft, gameMode, feedback]);
+  }, [timeLeft, gameMode, feedback, isLoading]);
 
   useEffect(() => {
+    if (isLoading) return;
     form.reset({ answer: undefined });
     setFeedback(null);
     setCurrentHint(null);
     setHintLevel(0);
     if(gameMode === 'Timed') setTimeLeft(60);
-  }, [currentLevel, gameMode, form]);
+  }, [currentLevel, gameMode, form, isLoading]);
 
   const resetLevel = () => {
     setFeedback(null);
@@ -206,11 +210,11 @@ export default function GamePage() {
     Challenge: <Trophy className="w-4 h-4" />,
   };
   
-  if (!user.name || !gameMode) {
+  if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen w-full p-4">
         <Loader2 className="w-16 h-16 animate-spin text-primary" />
-        <p className="mt-4">Loading...</p>
+        <p className="mt-4">Loading Game...</p>
       </div>
     );
   }
@@ -251,7 +255,7 @@ export default function GamePage() {
           
           <div className="flex justify-center">
             <div className="flex items-center gap-2 rounded-full bg-muted px-4 py-2 text-muted-foreground">
-              {gameModeIcons[gameMode]}
+              {gameMode && gameModeIcons[gameMode]}
               <span className="font-semibold">{gameMode} Mode</span>
             </div>
           </div>
