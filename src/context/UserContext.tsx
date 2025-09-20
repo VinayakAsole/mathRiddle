@@ -26,7 +26,6 @@ interface UserContextType {
   setSelectedGameMode: (mode: GameMode) => void;
   addPoints: (points: number) => void;
   spendPoints: (points: number) => void;
-  resetProgressForMode: (mode: GameMode) => void;
   leaderboard: LeaderboardEntry[];
   addScoreToLeaderboard: (entry: LeaderboardEntry) => void;
 }
@@ -73,14 +72,8 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const resetProgressForMode = (mode: GameMode) => {
-    // In a real app, you might have mode-specific progress
-    // For now, this is a placeholder.
-    console.log(`Resetting progress for ${mode} mode.`);
-  }
-
   return (
-    <UserContext.Provider value={{ user, setUser, selectedGameMode, setSelectedGameMode, addPoints, spendPoints, resetProgressForMode, leaderboard, addScoreToLeaderboard }}>
+    <UserContext.Provider value={{ user, setUser, selectedGameMode, setSelectedGameMode, addPoints, spendPoints, leaderboard, addScoreToLeaderboard }}>
       {children}
     </UserContext.Provider>
   );

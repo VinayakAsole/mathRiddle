@@ -35,7 +35,7 @@ const HINT_COST = 10;
 export default function GamePage() {
   const router = useRouter();
   const { toast } = useToast();
-  const { user, selectedGameMode, addPoints, resetProgressForMode, spendPoints, addScoreToLeaderboard } = useUser();
+  const { user, selectedGameMode, addPoints, spendPoints, addScoreToLeaderboard } = useUser();
   const gameMode = selectedGameMode;
   
   const [isLoading, setIsLoading] = useState(true);
@@ -98,7 +98,7 @@ export default function GamePage() {
   
   useEffect(() => {
     let timer: NodeJS.Timeout;
-    if (gameMode === 'Timed' && gameStatus === 'playing' && timeLeft > 0) {
+    if (gameMode === 'Timed' && gameStatus === 'playing' && timeLeft > 0 && feedback === null) {
       timer = setInterval(() => {
         setTimeLeft((prevTime) => prevTime - 1);
       }, 1000);
@@ -117,7 +117,6 @@ export default function GamePage() {
   }, [currentLevel, gameMode, isLoading]);
   
   const handlePlayAgain = () => {
-    if(gameMode) resetProgressForMode(gameMode);
     setCurrentLevel(0);
     setUnlockedLevels(1);
     setLives(3);
@@ -161,12 +160,12 @@ export default function GamePage() {
 
   useEffect(() => {
     if (gameMode === 'Challenge' && lives <= 0 && gameStatus === 'playing') {
+        handleGameCompletion();
         toast({
             title: "Game Over",
             description: "You've run out of lives.",
             variant: "destructive",
         });
-        handleGameCompletion();
     }
   }, [lives, gameMode, gameStatus]);
 
