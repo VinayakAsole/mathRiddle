@@ -35,7 +35,7 @@ const HINT_COST = 10;
 export default function GamePage() {
   const router = useRouter();
   const { toast } = useToast();
-  const { user, selectedGameMode, addPoints, resetProgressForMode, spendPoints } = useUser();
+  const { user, selectedGameMode, addPoints, resetProgressForMode, spendPoints, addScoreToLeaderboard } = useUser();
   const gameMode = selectedGameMode;
   
   const [isLoading, setIsLoading] = useState(true);
@@ -108,7 +108,7 @@ export default function GamePage() {
       }, 2000);
     }
     return () => clearInterval(timer);
-  }, [timeLeft, gameMode, gameStatus, currentLevel, feedback]);
+  }, [timeLeft, gameMode, gameStatus, currentLevel, feedback, goToNextLevel]);
 
   useEffect(() => {
     if (isLoading) return;
@@ -129,13 +129,25 @@ export default function GamePage() {
   
   const handleGameCompletion = () => {
     setGameStatus('completed');
+    let duration = 0;
     if (startTimeRef.current) {
       const endTime = Date.now();
-      const duration = Math.round((endTime - startTimeRef.current) / 1000);
+      duration = Math.round((endTime - startTimeRef.current) / 1000);
       const minutes = Math.floor(duration / 60);
       const seconds = duration % 60;
       setCompletionTime(`${minutes}m ${seconds}s`);
     }
+    
+    if (gameMode) {
+        addScoreToLeaderboard({
+            name: user.name,
+            points: user.points,
+            time: duration,
+            mode: gameMode,
+            date: new Date().toISOString(),
+        });
+    }
+
     toast({
       title: "Congratulations!",
       description: `You've completed all the riddles!`,
@@ -158,6 +170,12 @@ export default function GamePage() {
       }, 1500);
     } else {
       setFeedback("incorrect");
+       if (gameMode === 'Timed') {
+        setTimeout(() => {
+          goToNextLevel();
+        }, 2000);
+        return;
+      }
       if(gameMode === 'Challenge') {
         setLives(l => l - 1);
         if(lives - 1 <= 0) {
@@ -169,11 +187,6 @@ export default function GamePage() {
            setTimeout(() => handlePlayAgain(), 2000);
            return;
         }
-      } else if (gameMode === 'Timed') {
-        setTimeout(() => {
-          goToNextLevel();
-        }, 2000);
-        return;
       }
       form.setError("answer", { message: "Not quite, try again!" });
       setTimeout(() => {
@@ -299,15 +312,19 @@ export default function GamePage() {
             <div className="grid grid-cols-10 gap-1.5 justify-center">
               {Array.from({ length: TOTAL_LEVELS }).map((_, index) => {
                 const status = getLevelStatus(index);
-                const isClickable = (status === 'unlocked' || status === 'current') && gameStatus === 'playing';
+                const isClickable = status !== 'locked' && gameStatus === 'playing';
                 return (
                   <div
                     key={index}
-                    onClick={() => isClickable && setCurrentLevel(index)}
+                    onClick={() => {
+                        if (isClickable && status !== 'solved') {
+                            setCurrentLevel(index);
+                        }
+                    }}
                     className={cn(
                       "flex items-center justify-center text-xs font-bold h-7 w-7 rounded-md transition-all duration-300",
                       levelStatusStyles[status],
-                      isClickable && 'cursor-pointer hover:scale-110'
+                      (isClickable && status !== 'solved') && 'cursor-pointer hover:scale-110'
                     )}
                   >
                     {index + 1}
@@ -415,7 +432,3 @@ export default function GamePage() {
     </div>
   );
 }
-
-    
-
-    

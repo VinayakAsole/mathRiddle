@@ -1,9 +1,10 @@
+
 'use client';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useUser } from '@/context/UserContext';
-import { BrainCircuit, Infinity, Timer, Trophy } from 'lucide-react';
+import { BrainCircuit, Infinity, Timer, Trophy, BarChart } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
@@ -62,6 +63,10 @@ export default function GameModePage() {
                 </div>
             </Button>
           ))}
+            <Button variant="secondary" className="w-full" onClick={() => router.push('/leaderboard')}>
+                <BarChart className="mr-2 h-4 w-4" />
+                View Leaderboard
+            </Button>
         </CardContent>
       </Card>
     </div>
