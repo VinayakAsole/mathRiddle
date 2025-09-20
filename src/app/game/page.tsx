@@ -97,7 +97,7 @@ export default function GamePage() {
       }, 2000);
     }
     return () => clearInterval(timer);
-  }, [timeLeft, gameMode, gameStatus]);
+  }, [timeLeft, gameMode, gameStatus, resetLevel]);
 
   useEffect(() => {
     if (isLoading) return;
@@ -136,7 +136,7 @@ export default function GamePage() {
   }
 
   async function onSubmit(data: z.infer<typeof AnswerFormSchema>) {
-    if(feedback === 'timesup') return;
+    if(feedback !== null) return;
 
     if (data.answer === currentRiddle.answer) {
       setFeedback("correct");
