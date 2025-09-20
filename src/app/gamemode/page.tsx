@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useUser } from '@/context/UserContext';
 import { BrainCircuit, Infinity, Timer, Trophy } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
 type GameMode = "Timed" | "Endless" | "Challenge";
 
@@ -29,11 +30,13 @@ export default function GameModePage() {
     router.push('/game');
   };
 
-  if (!user.name) {
-    // Redirect if user data is not set
-    if (typeof window !== 'undefined') {
+  useEffect(() => {
+    if (!user.name) {
       router.push('/welcome');
     }
+  }, [user.name, router]);
+
+  if (!user.name) {
     return null;
   }
 

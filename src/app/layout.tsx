@@ -1,4 +1,5 @@
 import type {Metadata} from 'next';
+import { Bungee_Spice, PT_Sans } from 'next/font/google';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 import { cn } from '@/lib/utils';
@@ -9,6 +10,18 @@ export const metadata: Metadata = {
   description: 'A fun and engaging mobile game for solving math riddles.',
 };
 
+const ptSans = PT_Sans({
+  subsets: ['latin'],
+  weight: ['400', '700'],
+  variable: '--font-body',
+});
+
+const bungeeSpice = Bungee_Spice({
+  subsets: ['latin'],
+  weight: '400',
+  variable: '--font-headline',
+});
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -16,12 +29,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="h-full">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="true" />
-        <link href="https://fonts.googleapis.com/css2?family=Bungee+Spice&family=PT+Sans:wght@400;700&display=swap" rel="stylesheet" />
-      </head>
-      <body className={cn("font-body antialiased h-full")}>
+      <body className={cn("font-body antialiased h-full", ptSans.variable, bungeeSpice.variable)}>
         <UserProvider>
           {children}
         </UserProvider>

@@ -54,11 +54,9 @@ export default function GamePage() {
 
   useEffect(() => {
     if (!user.name || !gameMode) {
-      if(typeof window !== 'undefined') {
-        router.push('/welcome');
-      }
+      router.push('/welcome');
     }
-  }, [user, gameMode, router]);
+  }, [user.name, gameMode, router]);
 
 
   const currentRiddle = riddles[currentLevel % riddles.length];
