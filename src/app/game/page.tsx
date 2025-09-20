@@ -81,6 +81,8 @@ export default function GamePage() {
   const resetLevel = () => {
     setFeedback(null);
     form.reset({ answer: undefined });
+    setCurrentHint(null);
+    setHintLevel(0);
     if(gameMode === 'Timed') setTimeLeft(60);
   };
 
@@ -101,12 +103,8 @@ export default function GamePage() {
 
   useEffect(() => {
     if (isLoading) return;
-    form.reset({ answer: undefined });
-    setFeedback(null);
-    setCurrentHint(null);
-    setHintLevel(0);
-    if(gameMode === 'Timed') setTimeLeft(60);
-  }, [currentLevel, gameMode, form, isLoading]);
+    resetLevel();
+  }, [currentLevel, gameMode, isLoading]);
   
   const handlePlayAgain = () => {
     resetProgressForMode(gameMode!);
@@ -136,7 +134,7 @@ export default function GamePage() {
   }
 
   async function onSubmit(data: z.infer<typeof AnswerFormSchema>) {
-    if(feedback !== null) return;
+    if(feedback !== null || gameStatus !== 'playing') return;
 
     if (data.answer === currentRiddle.answer) {
       setFeedback("correct");
@@ -148,24 +146,23 @@ export default function GamePage() {
       setTimeout(() => {
         if (currentLevel + 1 < TOTAL_LEVELS) {
             setCurrentLevel(prev => prev + 1);
-            setUnlockedLevels(prev => Math.max(prev, currentLevel + 2));
         } else {
             handleGameCompletion();
         }
+        setUnlockedLevels(prev => Math.max(prev, currentLevel + 2));
       }, 1500);
     } else {
       setFeedback("incorrect");
       if(gameMode === 'Challenge') {
-        if(lives - 1 === 0) {
+        setLives(l => l - 1);
+        if(lives - 1 <= 0) {
           toast({
             title: "Game Over",
             description: "You've run out of lives.",
             variant: "destructive",
           });
-          setLives(0);
            setTimeout(() => handlePlayAgain(), 2000);
-        } else {
-          setLives(l => l - 1);
+           return;
         }
       }
       form.setError("answer", { message: "Not quite, try again!" });
@@ -404,5 +401,3 @@ export default function GamePage() {
     </div>
   );
 }
-
-    
