@@ -49,12 +49,12 @@ export default function GameModePage() {
         </CardHeader>
         <CardContent className="space-y-4">
           {(['Timed', 'Endless', 'Challenge'] as GameMode[]).map(mode => (
-            <Button key={mode} variant="outline" className="w-full h-24 justify-start p-6 text-left" onClick={() => handleModeSelect(mode)}>
-                <div className="flex items-center gap-4">
+            <Button key={mode} variant="outline" className="w-full h-auto min-h-24 justify-start p-6 text-left" onClick={() => handleModeSelect(mode)}>
+                <div className="flex items-center gap-4 w-full">
                     {gameModeIcons[mode]}
                     <div className="flex flex-col">
                         <p className="font-bold text-lg">{mode}</p>
-                        <p className="text-sm text-muted-foreground">{gameModeDescriptions[mode]}</p>
+                        <p className="text-sm text-muted-foreground whitespace-normal">{gameModeDescriptions[mode]}</p>
                     </div>
                 </div>
             </Button>
