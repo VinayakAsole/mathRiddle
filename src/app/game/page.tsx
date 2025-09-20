@@ -97,7 +97,7 @@ export default function GamePage() {
       }, 2000);
     }
     return () => clearInterval(timer);
-  }, [timeLeft, gameMode, gameStatus, resetLevel]);
+  }, [timeLeft, gameMode, gameStatus]);
 
   useEffect(() => {
     if (isLoading) return;
@@ -404,3 +404,5 @@ export default function GamePage() {
     </div>
   );
 }
+
+    
