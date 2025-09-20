@@ -1,4 +1,5 @@
-# Firebase Studio
+# Univarsal King
+so this math riddle games for fun.
 
 This is a NextJS starter in Firebase Studio.
 
