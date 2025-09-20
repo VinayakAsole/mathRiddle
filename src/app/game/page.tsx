@@ -78,9 +78,18 @@ export default function GamePage() {
 
   const currentRiddle = riddles[currentLevel % riddles.length];
 
+  const goToNextLevel = () => {
+    if (currentLevel + 1 < TOTAL_LEVELS) {
+        setCurrentLevel(prev => prev + 1);
+    } else {
+        handleGameCompletion();
+    }
+  };
+
   const resetLevel = () => {
     setFeedback(null);
     form.reset({ answer: undefined });
+    form.clearErrors("answer");
     setCurrentHint(null);
     setHintLevel(0);
     if(gameMode === 'Timed') setTimeLeft(60);
@@ -95,11 +104,11 @@ export default function GamePage() {
     } else if (gameMode === 'Timed' && gameStatus === 'playing' && timeLeft === 0) {
       setFeedback('timesup');
       setTimeout(() => {
-        resetLevel();
+        goToNextLevel();
       }, 2000);
     }
     return () => clearInterval(timer);
-  }, [timeLeft, gameMode, gameStatus]);
+  }, [timeLeft, gameMode, gameStatus, currentLevel]);
 
   useEffect(() => {
     if (isLoading) return;
@@ -144,11 +153,7 @@ export default function GamePage() {
         description: "On to the next challenge!",
       });
       setTimeout(() => {
-        if (currentLevel + 1 < TOTAL_LEVELS) {
-            setCurrentLevel(prev => prev + 1);
-        } else {
-            handleGameCompletion();
-        }
+        goToNextLevel();
         setUnlockedLevels(prev => Math.max(prev, currentLevel + 2));
       }, 1500);
     } else {
@@ -164,6 +169,11 @@ export default function GamePage() {
            setTimeout(() => handlePlayAgain(), 2000);
            return;
         }
+      } else if (gameMode === 'Timed') {
+        setTimeout(() => {
+          goToNextLevel();
+        }, 2000);
+        return;
       }
       form.setError("answer", { message: "Not quite, try again!" });
       setTimeout(() => {
