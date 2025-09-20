@@ -106,9 +106,9 @@ export default function GamePage() {
     form.reset({ answer: undefined });
     if(gameMode === 'Timed') setTimeLeft(60);
   };
-
-  const handleModeChange = (mode: GameMode) => {
-    resetProgressForMode(mode);
+  
+  const handlePlayAgain = () => {
+    resetProgressForMode(gameMode!);
     setCurrentLevel(0);
     setUnlockedLevels(1);
     setLives(3);
@@ -116,6 +116,7 @@ export default function GamePage() {
     setGameStatus('playing');
     startTimeRef.current = Date.now();
     setCompletionTime(null);
+    router.push('/gamemode');
   };
   
   const handleGameCompletion = () => {
@@ -159,7 +160,7 @@ export default function GamePage() {
             variant: "destructive",
           });
           setLives(0);
-           setTimeout(() => handleModeChange('Challenge'), 2000);
+           setTimeout(() => handlePlayAgain(), 2000);
         } else {
           setLives(l => l - 1);
         }
@@ -292,7 +293,8 @@ export default function GamePage() {
                 <h2 className="text-2xl font-bold">You did it!</h2>
                 <p>You completed all {TOTAL_LEVELS} riddles.</p>
                 {completionTime && <p>Total Time: <span className="font-bold">{completionTime}</span></p>}
-                <Button onClick={() => handleModeChange(gameMode!)}>Play Again</Button>
+                <p>Total Points: <span className="font-bold">{user.points}</span></p>
+                <Button onClick={handlePlayAgain}>Play Again</Button>
               </div>
             ) : (
               <div className={cn("text-center space-y-4 transition-opacity duration-300", feedback && "opacity-0")}>
@@ -352,3 +354,5 @@ export default function GamePage() {
     </div>
   );
 }
+
+    
